@@ -17,11 +17,16 @@ export class HomePage {
 
   login(){
     console.log('TypeScript from login');
-   window.cordova.plugins.GoogleApiPlugin.login({
-      webClientId: '1801024296-2t6clh0bee1drtmb94odqu29degg4mns.apps.googleusercontent.com',
+   window.cordova.plugins.GoogleApiPlugin.login([{
+      webClientId: '106721698617-phf7lndv4piiflekl7tsrk2la5m0nak5.apps.googleusercontent.com',
       offline: true,
-      scopes:  'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.metadata'
-    }, this.onLoginSuccess, this.onLoginError);
+      scopes:  'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.metadata https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appfolder'
+    }], this.onLoginSuccess, this.onLoginError);
+  }
+
+  getThings() {
+    console.log('TypeScript getThings');
+    window.cordova.plugins.GoogleApiPlugin.driveLogin([{},this.onLoginSuccess,this.onLoginError]);
   }
 
   onLoginSuccess(res){
