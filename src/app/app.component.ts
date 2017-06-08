@@ -6,6 +6,8 @@ import { SplashScreen } from '@ionic-native/splash-screen';
 import { HomePage } from '../pages/home/home';
 import { ListPage } from '../pages/list/list';
 
+declare var window: any;
+
 @Component({
   templateUrl: 'app.html'
 })
@@ -33,6 +35,14 @@ export class MyApp {
       // Here you can do any higher level native things you might need.
       this.statusBar.styleDefault();
       this.splashScreen.hide();
+      // window.plugins.googleplus.trySilentLogin({
+      //   webCliendId: '106721698617-phf7lndv4piiflekl7tsrk2la5m0nak5.apps.googleusercontent.com',
+      //   scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.metadata.readonly'
+      // }, (result)=> {
+      //   console.log('User logged ', result);
+      // }, (error)=>{
+      //   console.log('error in Silent Login ', error);
+      // })
     });
   }
 
