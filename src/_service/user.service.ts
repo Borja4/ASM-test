@@ -1,50 +1,102 @@
 import { Injectable } from '@angular/core';
-import { Http, RequestOptions, URLSearchParams } from '@angular/http';
- 
- 
+import { Http } from '@angular/http';
+import { Constants } from '../_constants/constants';
+import { SecureStorage, SecureStorageObject } from '@ionic-native/secure-storage';
+import { UserModel } from '../_models/user.model';
+
+
+declare var window: any; 
+declare var cordovaHTTP: any;
+
 @Injectable()
 export class UserService {
-    constructor(private http: Http) { }
- 
-    // getAll() {
-    //     return this.http.get('https://developers.google.com/drive/v3/reference/files/',
-    //      this.jwt()).map((response: Response) => response.json());
-    // }
- 
-    public getAuth0() {
-        return this.http.post('https://accounts.google.com/o/oauth2/v2/auth',null, this.oAuth2Header())
-        .subscribe((response) => console.log('data ',response), (error) => console.log('error ',error), () => {
-            console.log('completed!');
-        });
-        
-    }
- 
-    // private helper methods AIzaSyCOuSJuBU0A1xWFtgjOZ_7hCZaTIGxFnIE
-    private oAuth2Header() {
-        // let headers = new Headers({
-        //     client_id: '1801024296-2t6clh0bee1drtmb94odqu29degg4mns.apps.googleusercontent.com',
-        //     redirect_uri:'https://api.ionic.io/auth/integrations/google?app_id=611e9d90',
-        //   //  response_type: 'code',
-        //     scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.metadata',
-        // });
-        let params = new URLSearchParams();
-        params.append('client_id', '1801024296-2t6clh0bee1drtmb94odqu29degg4mns.apps.googleusercontent.com');
-        params.append('redirect_uri', 'https://api.ionic.io/auth/integrations/google?app_id=611e9d90');
-        params.append('response_type', 'code');
-        params.append('scope', 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.metadata');
-        
 
-        return new RequestOptions({ params: params });
+    //UserModel
+    private userLogged: UserModel;
+
+    //identifiers
+    private LOGIN_GOOGLE: String = "login";
+    private VALIDATE_ACCOUNT: String = "validateAccount";
+
+    //methods
+    private REQUEST_METHOD_VALIDATION = "/oauth2/v3/tokeninfo";
+
+    private identifierCall: String = "";
+    private instancedStore: SecureStorageObject;
+
+    constructor(private http: Http, private _constants: Constants, private securedStore: SecureStorage) { 
+                this.securedStore.create('databucket').then((st) => {
+            this.instancedStore = new SecureStorageObject(st);
+            this.instancedStore.get('userInfo').then((user)=>{
+               console.log("User already set");
+            }, error => console.log('No user stored,'))
+        }, (error)=> console.log('Error in instance of Secure storage. Error: ',error))
     }
-    // private jwt(authentification: string) {
-    //     // create authorization header with jwt token
-    //     // let currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    //     // if (currentUser && currentUser.token) {
-    //     //     let headers = new Headers({ 'Authorization':  });
-    //     //     return new RequestOptions({ headers: headers });
-    //     // }
-    //     // let headers = new Headers({ 'key':'AIzaSyCOuSJuBU0A1xWFtgjOZ_7hCZaTIGxFnIE' });
-    //     let headers = new Headers({ 'Authorization': 'Bearer ' + authentification });
-    //     return new RequestOptions({ headers: headers });
-    // }
+    
+    signInWithGoogle(success, reject) {
+        this.identifierCall = this.LOGIN_GOOGLE;
+        window.plugins.googleplus.login({
+            webClientId:this._constants.getClientWebId,
+            scope: this._constants.getDriveScopes
+        }, success(this.onSuccessCallback), reject(this.onFailedCallback));
+    }
+
+    private constructRequestHTTPByMethodName(method: String): String {
+        return `${this._constants.getGoogleURI}${method}`;
+    }
+
+    private onSuccessCallback(res) {
+        if(this.identifierCall === this.LOGIN_GOOGLE){  
+            this.userLogged = new UserModel(res);
+            this.validateLoggedUser(res);  
+        } else {
+            throw new ReferenceError("No identifier registered for this call")
+        }
+    }
+
+    private onFailedCallback(error) {
+        console.log('Error por gestionar en user.service ', error);
+    }
+
+    private validateLoggedUser(user) {
+        this.identifierCall = this.VALIDATE_ACCOUNT;
+        this.sendHTTPRequest(this.constructRequestHTTPByMethodName(this.REQUEST_METHOD_VALIDATION),
+            {
+              id_token:  user.idToken
+            }
+            ,(res)=>{
+            console.log("Resultado de la validacion. ", res);                    
+            this.setSafeDataStorage(user, this.VALIDATE_ACCOUNT);
+        }, (error) =>{
+            console.log("Error validando. Se desconectara el usuario", error);
+            window.plugins.googleplus.disconnect();
+
+        });
+
+    }
+
+    private setSafeDataStorage(res, dataIndex) {
+        if(dataIndex != typeof String || dataIndex == null) {
+            console.log('No dataIndex is passed, we cannot know what you want to set.');
+            return;
+        }
+        this.instancedStore.get('userInfo').then((data)=> {
+            //exist information from user
+            this.instancedStore.remove('userInfo')
+            .then((result)=>{
+                console.log('Information removed successfully ', result);
+                this.instancedStore.set('userInfo', JSON.stringify(res)).then((resultToSet)=>{
+                    console.log('Information from store updated. ', resultToSet);
+                })
+                .catch((error)=> console.log('Error updating user information from storage. ', error));
+            })
+            .catch((error)=> console.log('Error removing user information from storage. Error: ', error));
+        }, error => console.log('error'));
+    }
+
+    private sendHTTPRequest(url, params=null, success, error){
+        if(params == null) params = {};
+        cordovaHTTP.get(url, params, success, error);
+    }
+
 }

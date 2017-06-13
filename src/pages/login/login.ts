@@ -6,15 +6,14 @@ declare var window: any;
 declare var cordovaHTTP: any;
 
 @Component({
-  selector: 'page-home',
-  templateUrl: 'home.html'
+  selector: 'page-login',
+  templateUrl: 'login.html'
 })
-export class HomePage {
-  public result: string ='no data';
+export class LoginPage {
 
   constructor(
     public navCtrl: NavController, 
-    public service: UserService
+    private service: UserService
   ) {}
 
  

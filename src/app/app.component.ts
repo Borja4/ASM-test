@@ -5,6 +5,9 @@ import { SplashScreen } from '@ionic-native/splash-screen';
 
 import { HomePage } from '../pages/home/home';
 import { ListPage } from '../pages/list/list';
+import { LoginPage } from '../pages/login/login';
+
+import { SecureStorage } from '@ionic-native/secure-storage';
 
 declare var window: any;
 
@@ -14,17 +17,23 @@ declare var window: any;
 export class MyApp {
   @ViewChild(Nav) nav: Nav;
 
-  rootPage: any = HomePage;
+  rootPage: any = HomePage;  
 
   pages: Array<{title: string, component: any}>;
+  
+  constructor(
+    public platform: Platform, 
+    public statusBar: StatusBar, 
+    public splashScreen: SplashScreen,
+    private storage: SecureStorage) {
 
-  constructor(public platform: Platform, public statusBar: StatusBar, public splashScreen: SplashScreen) {
     this.initializeApp();
 
     // used for an example of ngFor and navigation
     this.pages = [
       { title: 'Home', component: HomePage },
-      { title: 'List', component: ListPage }
+      { title: 'List', component: ListPage },
+      { title: 'Login', component: LoginPage }
     ];
 
   }
@@ -33,16 +42,20 @@ export class MyApp {
     this.platform.ready().then(() => {
       // Okay, so the platform is ready and our plugins are available.
       // Here you can do any higher level native things you might need.
+      this.storage.create('databucket').then((storeObject)=>{
+        storeObject.get('userInfo').then(()=>{
+          //try silent login to check if token stills valid
+          
+        })
+        .catch((error)=> {
+          console.log('No user reigstred, redirectig to login...');
+          this.rootPage = LoginPage;
+        });
+      })
+      .catch((error) => console.log("something went Wrong when instantiate Store."));
+
       this.statusBar.styleDefault();
       this.splashScreen.hide();
-      // window.plugins.googleplus.trySilentLogin({
-      //   webCliendId: '106721698617-phf7lndv4piiflekl7tsrk2la5m0nak5.apps.googleusercontent.com',
-      //   scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.metadata.readonly'
-      // }, (result)=> {
-      //   console.log('User logged ', result);
-      // }, (error)=>{
-      //   console.log('error in Silent Login ', error);
-      // })
     });
   }
 
